@@ -1,0 +1,9 @@
+client/.idea/
+client/.vscode/
+client/cmake-build-debug/
+server/.idea/
+server/.vscode/
+server/cmake-build-debug/
+.idea
+.vscode
+
