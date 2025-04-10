@@ -1,7 +1,7 @@
 #ifndef SERVER_SOCKET_H
 #define SERVER_SOCKET_H
-#include <windows.h>
 #include <winsock2.h>
+#include <windows.h>
 #include <ws2tcpip.h>
 #include <stdio.h>
 #include "gui.h"
@@ -22,5 +22,6 @@ DWORD WINAPI serverThread(LPVOID lpParam);
 typedef struct {
     HWND *hwnd;
     SOCKET *ClientSocket;
+    int *sockets;
 } ThArguments;
 #endif //SERVER_SOCKET_H

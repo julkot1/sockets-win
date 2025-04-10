@@ -7,5 +7,8 @@ add_executable(server main.c
         socket.c
         socket.h
         gui.c
-        gui.h)
+        gui.h
+        message.c
+        message.h
+        ../client/message.h)
 target_link_libraries(server PRIVATE ws2_32)

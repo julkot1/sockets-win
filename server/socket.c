@@ -1,5 +1,5 @@
 #include "socket.h"
-
+#include "message.h"
 
 
 struct addrinfo *createServer(HWND hwnd)
@@ -30,9 +30,12 @@ struct addrinfo *createServer(HWND hwnd)
     return result;
 }
 
+
+
 SOCKET createListenSocket(struct addrinfo *result, HWND hwnd)
 {
     int iResult;
+    printf("%d\n", action);
     SOCKET ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     if (ListenSocket == INVALID_SOCKET)
     {
@@ -65,46 +68,83 @@ SOCKET createListenSocket(struct addrinfo *result, HWND hwnd)
     return ListenSocket;
 }
 
+int sendRequest(SOCKET ClientSocket, HWND hwnd)
+{
+    MESSAGE msg;
+    if(action == GET_CLIPBOARD_ACTION)
+    {
+        action = NON_ACTION;
+        msg.header = SIGNAL_CLIPBOARD;
+        msg.hasNext = NEXT_FALSE;
+        int iSendResult = send(ClientSocket, (char *) &msg, sizeof(MESSAGE), 0);
+        if (iSendResult == SOCKET_ERROR)
+        {
+            LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
+        } else
+            LogMessage(hwnd, "[Thread %lu] send SIGNAL: %d", GetCurrentThreadId(), msg.header);
+        do
+        {
+            recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
+            if (msg.header == GET_CLIPBOARD)
+            {
+                LogMessage(hwnd,msg.payload);
+            }
 
-DWORD WINAPI clientHandler(LPVOID clientSocketPtr) {
+        }while(msg.hasNext == NEXT_TRUE);
+
+    }
+    return 0;
+}
+DWORD WINAPI clientHandler(LPVOID clientSocketPtr)
+{
     ThArguments args = *((ThArguments*)clientSocketPtr);
     SOCKET ClientSocket = *args.ClientSocket;
     HWND hwnd = *args.hwnd;
 
-    char recvbuf[DEFAULT_BUFLEN];
-    int recvbuflen = DEFAULT_BUFLEN;
+    MESSAGE msg;
     int iResult;
     int iSendResult;
 
-    do {
-        iResult = recv(ClientSocket, recvbuf, recvbuflen, 0);
-        if (iResult > 0) {
-            recvbuf[iResult] = '\0';
-            LogMessage(hwnd,"[Thread %lu] Received: %s", GetCurrentThreadId(), recvbuf);
-            iSendResult = send(ClientSocket, recvbuf, iResult, 0);
-            if (iSendResult == SOCKET_ERROR) {
-                LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
-                break;
-            }
-        } else if (iResult == 0) {
-            LogMessage(hwnd, "[Thread %lu] Connection closing...", GetCurrentThreadId());
-            break;
-        } else {
-            LogMessage(hwnd, "[Thread %lu] recv failed: %d", GetCurrentThreadId(), WSAGetLastError());
-            break;
-        }
+    do
+    {
+        if(sendRequest(ClientSocket, hwnd))break;
+//        iResult = recv(ClientSocket, (char*)&msg, sizeof (MESSAGE), 0);
+//        if (iResult > 0)
+//        {
+//            LogMessage(hwnd,"[Thread %lu] Received: HEADER:%d PAYLOAD:%s", GetCurrentThreadId(), msg.header, msg.payload);
+////            iSendResult = send(ClientSocket, recvbuf, iResult, 0);
+////            if (iSendResult == SOCKET_ERROR)
+////            {
+////                LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
+////                break;
+////            }
+//        }
+//        else if (iResult == 0)
+//        {
+//            LogMessage(hwnd, "[Thread %lu] Connection closing...", GetCurrentThreadId());
+//            *args.sockets--;
+//            break;
+//        } else
+//        {
+//            LogMessage(hwnd, "[Thread %lu] recv failed: %d", GetCurrentThreadId(), WSAGetLastError());
+//            *args.sockets--;
+//            break;
+//        }
     } while (1);
+    printf("%d\n", *args.sockets);
 
     closesocket(ClientSocket);
     return 0;
 }
 
 
-DWORD WINAPI serverThread(LPVOID lpParam) {
+DWORD WINAPI serverThread(LPVOID lpParam)
+{
     HWND hEditLog = *(HWND *)lpParam;
     WSADATA wsaData;
     struct addrinfo *result = NULL, hints;
     result = createServer(hEditLog);
+    int sockets = 0;
     if (result == NULL)
     {
         printf("ERROR\n");
@@ -112,7 +152,8 @@ DWORD WINAPI serverThread(LPVOID lpParam) {
     }
     SOCKET ListenSocket = createListenSocket(result, hEditLog);
 
-    if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
+    if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR)
+    {
         LogMessage(hEditLog, "listen failed: %ld", WSAGetLastError());
         closesocket(ListenSocket);
         WSACleanup();
@@ -121,10 +162,12 @@ DWORD WINAPI serverThread(LPVOID lpParam) {
 
     LogMessage(hEditLog,"Server started. Listening on port %s...", DEFAULT_PORT);
 
-    while (1) {
+    while (1)
+    {
         SOCKET* ClientSocket = (SOCKET*)malloc(sizeof(SOCKET));
         *ClientSocket = accept(ListenSocket, NULL, NULL);
-        if (*ClientSocket == INVALID_SOCKET) {
+        if (*ClientSocket == INVALID_SOCKET)
+        {
             LogMessage(hEditLog,"accept failed: %d", WSAGetLastError());
             free(ClientSocket);
             continue;
@@ -134,10 +177,15 @@ DWORD WINAPI serverThread(LPVOID lpParam) {
         ThArguments arguments;
         arguments.hwnd = &hEditLog;
         arguments.ClientSocket = ClientSocket;
+        arguments.sockets = &sockets;
         HANDLE hThread = CreateThread(NULL, 0, clientHandler, &arguments, 0, NULL);
-        if (hThread) {
+        if (hThread)
+        {
+            sockets++;
+            printf("%d\n", sockets);
             CloseHandle(hThread);
-        } else {
+        } else
+        {
             LogMessage(hEditLog,"Failed to create client thread.");
             closesocket(*ClientSocket);
             free(ClientSocket);

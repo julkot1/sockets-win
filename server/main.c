@@ -6,14 +6,18 @@
 #include "gui.h"
 HWND hEditLog;
 
+ACTION action;
 
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+    printf("dsfdf\n");
+    action = NON_ACTION;
     createWindow(&hEditLog, hInstance, nCmdShow);
     CreateThread(NULL, 0, serverThread, &hEditLog, 0, NULL);
 
     MSG msg = {0};
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }

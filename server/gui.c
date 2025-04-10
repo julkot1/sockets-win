@@ -1,6 +1,7 @@
 #include "gui.h"
 
-void LogMessage(HWND hEditLog, const char* format, ...) {
+void LogMessage(HWND hEditLog, const char* format, ...)
+{
     char buffer[512];
     va_list args;
     va_start(args, format);
@@ -14,8 +15,18 @@ void LogMessage(HWND hEditLog, const char* format, ...) {
 }
 
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
+LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+    switch (uMsg)
+    {
+        case WM_COMMAND:
+            if (LOWORD(wParam) == 1)
+            {
+                action = GET_CLIPBOARD_ACTION;
+                printf("ACTION: %d\n", action);
+            }
+                //MessageBox(hwnd, "Button 1 clicked", "Info", MB_OK);
+            break;
         case WM_DESTROY:
             PostQuitMessage(0);
             return 0;
@@ -38,7 +49,7 @@ void createWindow(HWND *hEditLog, HINSTANCE hInstance, int nCmdShow)
     HWND hwnd = CreateWindowEx(
             0, CLASS_NAME, "TCP Server",
             WS_OVERLAPPEDWINDOW,
-            CW_USEDEFAULT, CW_USEDEFAULT, 640, 480,
+            CW_USEDEFAULT, CW_USEDEFAULT, 640, 500,
             NULL, NULL, hInstance, NULL);
 
     *hEditLog = CreateWindowEx(
@@ -47,7 +58,11 @@ void createWindow(HWND *hEditLog, HINSTANCE hInstance, int nCmdShow)
             WS_CHILD | WS_VISIBLE | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_READONLY,
             10, 10, 600, 400,
             hwnd, NULL, hInstance, NULL);
-
+    CreateWindow("BUTTON", "Button 1",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 10, 420, 100, 30,
+                 hwnd, (HMENU)1,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
     ShowWindow(hwnd, nCmdShow);
     UpdateWindow(hwnd);
 }

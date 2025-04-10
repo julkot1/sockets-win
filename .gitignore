@@ -5,5 +5,4 @@ server/.idea/
 server/.vscode/
 server/cmake-build-debug/
 .idea
-.vscode
-
+.vscodes
