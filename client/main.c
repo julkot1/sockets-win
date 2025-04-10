@@ -93,6 +93,7 @@ int sendClipboard(SOCKET socket) {
             actualWchars = i;
         }
         msg.header = GET_CLIPBOARD;
+        memset(msg.payload, 0, 512);
         strcpy(msg.payload, chunk);
         send(socket, (char *)&msg, sizeof(MESSAGE ), 0);
         printf("%d\n", msg.hasNext);

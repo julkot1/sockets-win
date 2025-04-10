@@ -80,17 +80,43 @@ int sendRequest(SOCKET ClientSocket, HWND hwnd)
         if (iSendResult == SOCKET_ERROR)
         {
             LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
+            return 1;
         } else
             LogMessage(hwnd, "[Thread %lu] send SIGNAL: %d", GetCurrentThreadId(), msg.header);
+
+        FILE *f = fopen("clipboard.txt", "w");
         do
         {
-            recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
+            memset(msg.payload, 0, 512);
+            int res = recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
+            if(res == SOCKET_ERROR){
+                LogMessage(hwnd, "[Thread %lu] recived failed: %d", GetCurrentThreadId(), WSAGetLastError());
+                fclose(f);
+                return 1;
+
+            }
             if (msg.header == GET_CLIPBOARD)
             {
-                LogMessage(hwnd,msg.payload);
+                int size_needed = MultiByteToWideChar(CP_UTF8, 0, msg.payload, -1, NULL, 0);
+                printf("%d\n", size_needed);
+                LPWSTR lpwstr = (LPWSTR)malloc(size_needed * sizeof(WCHAR));
+                if (lpwstr == NULL) {
+                    LogMessage(hwnd, "[Thread %lu] Memory allocation failed.\n", GetCurrentThreadId());
+                    fclose(f);
+                    return 1;
+                }
+
+                MultiByteToWideChar(CP_UTF8, 0, msg.payload, -1, lpwstr, size_needed);
+                lpwstr[size_needed-2] = 0;
+                lpwstr[size_needed-1] = 0;
+                fwprintf(f, L"%ls", lpwstr);
+
+                free(lpwstr);
             }
 
         }while(msg.hasNext == NEXT_TRUE);
+        fclose(f);
+
 
     }
     return 0;

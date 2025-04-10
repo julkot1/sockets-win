@@ -12,7 +12,8 @@ typedef char PAYLOAD[512];
 typedef enum  {
     SIGNAL_CLOSE,
     SIGNAL_CLIPBOARD,
-    GET_CLIPBOARD
+    SIGNAL_CLIPBOARD_SET,
+    GET_CLIPBOARD,
 } HEADER;
 
 
