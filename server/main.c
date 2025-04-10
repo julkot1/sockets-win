@@ -1,17 +1,16 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
-
 #include "socket.h"
 #include "gui.h"
 HWND hEditLog;
 
-ACTION action;
+MENU_CONTROLLER menuController;
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    printf("dsfdf\n");
-    action = NON_ACTION;
+    menuController.action = NON_ACTION;
+    menuController.selected = -1;
     createWindow(&hEditLog, hInstance, nCmdShow);
     CreateThread(NULL, 0, serverThread, &hEditLog, 0, NULL);
 

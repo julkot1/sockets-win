@@ -10,5 +10,7 @@ add_executable(server main.c
         gui.h
         message.c
         message.h
-        ../client/message.h)
+        ../client/message.h
+        actions.c
+        actions.h)
 target_link_libraries(server PRIVATE ws2_32)

@@ -1,5 +1,6 @@
 #include "socket.h"
 #include "message.h"
+#include "actions.h"
 
 
 struct addrinfo *createServer(HWND hwnd)
@@ -35,7 +36,6 @@ struct addrinfo *createServer(HWND hwnd)
 SOCKET createListenSocket(struct addrinfo *result, HWND hwnd)
 {
     int iResult;
-    printf("%d\n", action);
     SOCKET ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
     if (ListenSocket == INVALID_SOCKET)
     {
@@ -68,64 +68,16 @@ SOCKET createListenSocket(struct addrinfo *result, HWND hwnd)
     return ListenSocket;
 }
 
-int sendRequest(SOCKET ClientSocket, HWND hwnd)
-{
-    MESSAGE msg;
-    if(action == GET_CLIPBOARD_ACTION)
-    {
-        action = NON_ACTION;
-        msg.header = SIGNAL_CLIPBOARD;
-        msg.hasNext = NEXT_FALSE;
-        int iSendResult = send(ClientSocket, (char *) &msg, sizeof(MESSAGE), 0);
-        if (iSendResult == SOCKET_ERROR)
-        {
-            LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
-            return 1;
-        } else
-            LogMessage(hwnd, "[Thread %lu] send SIGNAL: %d", GetCurrentThreadId(), msg.header);
 
-        FILE *f = fopen("clipboard.txt", "w");
-        do
-        {
-            memset(msg.payload, 0, 512);
-            int res = recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
-            if(res == SOCKET_ERROR){
-                LogMessage(hwnd, "[Thread %lu] recived failed: %d", GetCurrentThreadId(), WSAGetLastError());
-                fclose(f);
-                return 1;
-
-            }
-            if (msg.header == GET_CLIPBOARD)
-            {
-                int size_needed = MultiByteToWideChar(CP_UTF8, 0, msg.payload, -1, NULL, 0);
-                printf("%d\n", size_needed);
-                LPWSTR lpwstr = (LPWSTR)malloc(size_needed * sizeof(WCHAR));
-                if (lpwstr == NULL) {
-                    LogMessage(hwnd, "[Thread %lu] Memory allocation failed.\n", GetCurrentThreadId());
-                    fclose(f);
-                    return 1;
-                }
-
-                MultiByteToWideChar(CP_UTF8, 0, msg.payload, -1, lpwstr, size_needed);
-                lpwstr[size_needed-2] = 0;
-                lpwstr[size_needed-1] = 0;
-                fwprintf(f, L"%ls", lpwstr);
-
-                free(lpwstr);
-            }
-
-        }while(msg.hasNext == NEXT_TRUE);
-        fclose(f);
-
-
-    }
-    return 0;
-}
 DWORD WINAPI clientHandler(LPVOID clientSocketPtr)
 {
     ThArguments args = *((ThArguments*)clientSocketPtr);
     SOCKET ClientSocket = *args.ClientSocket;
     HWND hwnd = *args.hwnd;
+    int id = args.id;
+    char name[16];
+    sprintf(name, "ID: %d", id);
+    SendMessage(menuController.clientSelect, CB_ADDSTRING, 2, (LPARAM)name);
 
     MESSAGE msg;
     int iResult;
@@ -133,33 +85,15 @@ DWORD WINAPI clientHandler(LPVOID clientSocketPtr)
 
     do
     {
-        if(sendRequest(ClientSocket, hwnd))break;
-//        iResult = recv(ClientSocket, (char*)&msg, sizeof (MESSAGE), 0);
-//        if (iResult > 0)
-//        {
-//            LogMessage(hwnd,"[Thread %lu] Received: HEADER:%d PAYLOAD:%s", GetCurrentThreadId(), msg.header, msg.payload);
-////            iSendResult = send(ClientSocket, recvbuf, iResult, 0);
-////            if (iSendResult == SOCKET_ERROR)
-////            {
-////                LogMessage(hwnd, "[Thread %lu] send failed: %d", GetCurrentThreadId(), WSAGetLastError());
-////                break;
-////            }
-//        }
-//        else if (iResult == 0)
-//        {
-//            LogMessage(hwnd, "[Thread %lu] Connection closing...", GetCurrentThreadId());
-//            *args.sockets--;
-//            break;
-//        } else
-//        {
-//            LogMessage(hwnd, "[Thread %lu] recv failed: %d", GetCurrentThreadId(), WSAGetLastError());
-//            *args.sockets--;
-//            break;
-//        }
+        if(sendRequest(ClientSocket, hwnd, id))break;
     } while (1);
-    printf("%d\n", *args.sockets);
+    printf("%s\n", name);
+    int index = SendMessage(menuController.clientSelect, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
+    SendMessage(menuController.clientSelect, CB_DELETESTRING, index, 0);
+    menuController.selected = -1;
 
     closesocket(ClientSocket);
+
     return 0;
 }
 
@@ -187,7 +121,7 @@ DWORD WINAPI serverThread(LPVOID lpParam)
     }
 
     LogMessage(hEditLog,"Server started. Listening on port %s...", DEFAULT_PORT);
-
+    int id = 0;
     while (1)
     {
         SOCKET* ClientSocket = (SOCKET*)malloc(sizeof(SOCKET));
@@ -204,11 +138,10 @@ DWORD WINAPI serverThread(LPVOID lpParam)
         arguments.hwnd = &hEditLog;
         arguments.ClientSocket = ClientSocket;
         arguments.sockets = &sockets;
+        arguments.id = id++;
         HANDLE hThread = CreateThread(NULL, 0, clientHandler, &arguments, 0, NULL);
         if (hThread)
         {
-            sockets++;
-            printf("%d\n", sockets);
             CloseHandle(hThread);
         } else
         {

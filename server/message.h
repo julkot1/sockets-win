@@ -1,6 +1,4 @@
-//
-// Created by julia on 09/04/2025.
-//
+
 
 #ifndef SERVER_MESSAGE_H
 #define SERVER_MESSAGE_H
@@ -12,7 +10,10 @@ typedef char PAYLOAD[512];
 typedef enum  {
     SIGNAL_CLOSE,
     SIGNAL_CLIPBOARD,
-    GET_CLIPBOARD
+    GET_CLIPBOARD,
+    SIGNAL_CLIPBOARD_SET,
+    RESPONSE_OK,
+    RESPONSE_FAILED
 } HEADER;
 
 

@@ -23,5 +23,6 @@ typedef struct {
     HWND *hwnd;
     SOCKET *ClientSocket;
     int *sockets;
+    int id;
 } ThArguments;
 #endif //SERVER_SOCKET_H

