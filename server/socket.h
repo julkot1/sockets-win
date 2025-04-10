@@ -18,11 +18,14 @@ struct addrinfo *createServer(HWND hwnd);
 SOCKET createListenSocket(struct addrinfo *result, HWND hwnd);
 DWORD WINAPI clientHandler(LPVOID clientSocketPtr);
 DWORD WINAPI serverThread(LPVOID lpParam);
-
+typedef enum {
+    MOUSE_LOCK,
+    MOUSE_UNLOCK
+} MOUSE_STATE;
 typedef struct {
     HWND *hwnd;
     SOCKET *ClientSocket;
-    int *sockets;
     int id;
+    MOUSE_STATE mouseState;
 } ThArguments;
 #endif //SERVER_SOCKET_H

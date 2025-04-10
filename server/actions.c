@@ -1,15 +1,49 @@
 #include "actions.h"
 
-int sendRequest(SOCKET ClientSocket, HWND hwnd, int id)
+int sendRequest(ThArguments *args)
 {
-    if (id != menuController.selected)return 0;
+    if (args->id != menuController.selected)return 0;
     if(menuController.action == GET_CLIPBOARD_ACTION )
-        return getClipboard(ClientSocket, hwnd, id);
+        return getClipboard(*args->ClientSocket, *args->hwnd, args->id);
     else if(menuController.action == CLOSE_ACTION)
-        return closeClient(ClientSocket, hwnd, id);
+        return closeClient(*args->ClientSocket, *args->hwnd, args->id);
     else if (menuController.action == SET_CLIPBOARD_ACTION)
-        return setClipboard(ClientSocket, hwnd, id);
+        return setClipboard(*args->ClientSocket, *args->hwnd, args->id);
+    else if (menuController.action == LOCK_MOUSE_ACTION)
+        return mouseLock(*args->ClientSocket, *args->hwnd, args->id, &args->mouseState);
 
+    return 0;
+}
+int mouseLock(SOCKET ClientSocket, HWND hwnd, int id, MOUSE_STATE *mouseState)
+{
+    MESSAGE msg;
+    menuController.action = NON_ACTION;
+    msg.header = *mouseState == MOUSE_UNLOCK ? SIGNAL_MOUSE_LOCK : SIGNAL_MOUSE_UNLOCK;
+    if(*mouseState == MOUSE_UNLOCK )
+    {
+        *mouseState = MOUSE_LOCK;
+    } else
+    {
+        *mouseState = MOUSE_UNLOCK;
+    }
+    msg.hasNext = NEXT_FALSE;
+
+    strcpy(msg.payload, menuController.payload);
+
+    int iSendResult = send(ClientSocket, (char *) &msg, sizeof(MESSAGE), 0);
+    if (iSendResult == SOCKET_ERROR)
+    {
+        LogMessage(hwnd, "[Thread %lu] [Id %d] send failed: %d", GetCurrentThreadId(), id, WSAGetLastError());
+        return 1;
+    } else
+        LogMessage(hwnd, "[Thread %lu] [Id %d] send SIGNAL: %d", GetCurrentThreadId(), id, msg.header);
+
+    int res = recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
+    if(res == SOCKET_ERROR){
+        LogMessage(hwnd, "[Thread %lu] [Id %d] received failed: %d", GetCurrentThreadId(), id, WSAGetLastError());
+        return 1;
+    }
+    LogMessage(hwnd, "[Thread %lu] [Id %d] received SIGNAL %d", GetCurrentThreadId(), id, msg.header);
     return 0;
 }
 int setClipboard(SOCKET ClientSocket, HWND hwnd, int id)

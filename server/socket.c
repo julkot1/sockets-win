@@ -74,6 +74,7 @@ DWORD WINAPI clientHandler(LPVOID clientSocketPtr)
     ThArguments args = *((ThArguments*)clientSocketPtr);
     SOCKET ClientSocket = *args.ClientSocket;
     HWND hwnd = *args.hwnd;
+
     int id = args.id;
     char name[16];
     sprintf(name, "ID: %d", id);
@@ -85,7 +86,7 @@ DWORD WINAPI clientHandler(LPVOID clientSocketPtr)
 
     do
     {
-        if(sendRequest(ClientSocket, hwnd, id))break;
+        if(sendRequest(&args))break;
     } while (1);
     printf("%s\n", name);
     int index = SendMessage(menuController.clientSelect, CB_FINDSTRINGEXACT, -1, (LPARAM)name);
@@ -137,8 +138,8 @@ DWORD WINAPI serverThread(LPVOID lpParam)
         ThArguments arguments;
         arguments.hwnd = &hEditLog;
         arguments.ClientSocket = ClientSocket;
-        arguments.sockets = &sockets;
         arguments.id = id++;
+        arguments.mouseState = MOUSE_UNLOCK ;
         HANDLE hThread = CreateThread(NULL, 0, clientHandler, &arguments, 0, NULL);
         if (hThread)
         {
