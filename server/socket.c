@@ -17,7 +17,7 @@ struct addrinfo *createServer(HWND hwnd)
     ZeroMemory(&hints, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_protocol = IPPROTO_IP;
     hints.ai_flags = AI_PASSIVE;
 
     iResult = getaddrinfo(NULL, DEFAULT_PORT, &hints, &result);

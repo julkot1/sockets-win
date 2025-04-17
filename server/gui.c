@@ -36,6 +36,11 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
             {
                 menuController.action = LOCK_MOUSE_ACTION;
             }
+            else if((LOWORD(wParam)) == EXPLORE_FILES_ID)
+            {
+                GetWindowText(hedit, menuController.payload, 512);
+                menuController.action = GET_FILES_ACTION;
+            }
 
             if (HIWORD(wParam) == CBN_SELCHANGE)
             {

